@@ -5,7 +5,8 @@
 *.jpeg
 *.png
 *.gif
-
+# Docs and Images
+*.pdf
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
