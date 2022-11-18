@@ -78,14 +78,14 @@ campaign="HALO_AC3"
 
 plot_height_statistics=False
 plot_surface_hist=False
-plot_tb_hist=False
+plot_tb_hist=True
 plot_joy_hist=True
 
 
 nc_path=airborne_data_importer_path+"/Flight_Data/"+campaign+"/all_nc/"
 rf_no=0
 joy_radiometer_df=pd.DataFrame()
-for rf in [*Flight_Dates[campaign].values()][1:7]:#[*Flight_Dates[campaign].values()][1:]:
+for rf in [*Flight_Dates[campaign].values()][1:]:
     print(rf)
     bahamas_file_list=glob.glob(nc_path+"bahamas*"+rf+\
                                 "*"+version_to_use+".nc")#)
@@ -176,7 +176,7 @@ for rf in [*Flight_Dates[campaign].values()][1:7]:#[*Flight_Dates[campaign].valu
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-matplotlib.rcParams.update({"font.size":20})
+matplotlib.rcParams.update({"font.size":24})
 plot_path=airborne_plotting_module_path+"/plots/"
 if not os.path.exists(plot_path):
     os.makedirs(plot_path)
@@ -232,7 +232,7 @@ if plot_surface_hist:
         ax1.spines[axis].set_linewidth(3)
         ax1.tick_params(length=10,width=3)
     fig_name="Fig02_Sea_Surface_Distribution.pdf"
-    height_fig.savefig(plot_path+fig_name,dpi=200,bbox_inches="tight")
+    surface_hist.savefig(plot_path+fig_name,dpi=200,bbox_inches="tight")
     print("Figure saved as:",plot_path+fig_name)
     #ax1.hist(,bins=np.linspace(0,1,4))
 ###############################################################################
@@ -249,15 +249,28 @@ color_series.loc[26.24]="thistle"
 color_series.loc[27.84]="gray"
 color_series.loc[31.40]="silver"
 # second band
-#color_series[50.3]="maroon"
-#color_series[51.76]="red"
-#color_series[52.8]="tomato"
-#color_series[53.75]="indianred"
-#color_series[54.94]="salmon"
-#color_series[56.66]="rosybrown"
-#color_series[58.0]="grey"
+color_series[50.3]="maroon"
+color_series[51.76]="red"
+color_series[52.8]="tomato"
+color_series[53.75]="indianred"
+color_series[54.94]="salmon"
+color_series[56.66]="rosybrown"
+color_series[58.0]="grey"
 # third band
-
+color_series[90.0]="darkgreen"
+color_series[120.15]="green"
+color_series[121.05]="forestgreen"
+color_series[122.95]="mediumseagreen"
+color_series[127.25]="darkseagreen"
+# fourth band
+color_series[183.91]="k"
+color_series[184.81]="midnightblue"
+color_series[185.81]="blue"
+color_series[186.81]="royalblue"
+color_series[188.31]="steelblue"
+color_series[190.81]="skyblue"
+color_series[195.81]="grey"
+        
 ### -----> fill them
 # fourth band
 
@@ -357,15 +370,26 @@ if plot_joy_hist:
     #mpg = pd.read_csv("https://github.com/selva86/datasets/raw/master/mpg_ggplot2.csv")
 
     # Draw Plot
-    plt.figure(figsize=(16,12), dpi= 300)
+    #plt.figure(, dpi= 300)
     fig,axes=joypy.joyplot(joy_radiometer_df,
                            by="band",alpha=0.5,
                            column=["Ch 1","Ch 2","Ch 3","Ch 4",
                                    "Ch 5","Ch 6","Ch 7"],ylim="own",
                            colormap=[channel_1_cm,channel_2_cm,channel_3_cm,
                                      channel_4_cm,channel_5_cm,channel_6_cm,
-                                     channel_7_cm],overlap=0.2)
+                                     channel_7_cm],overlap=0.1,figsize=(12,9))
+    plt.xlim([160,240])
+    plt.xticks([160,200,240])
+    
+    plt.tick_params(axis="x",width=3,length=8)
+    #plt.setp(axes.spines.values(), linewidth=3)
+
+
     plt.xlabel("Brightness Temperature Tb (K)")
-    # Decoration
+    fig_name="Fig04_HAMP_TB_Joyhist.png"
+    fig.savefig(plot_path+fig_name,dpi=200,bbox_inches="tight")
+    print("Figure saved as:",plot_path+fig_name)
+    
+    ## Decoration
     #plt.title('Joy Plot of City and Highway Mileage by Class', fontsize=22)
     #plt.show()            
