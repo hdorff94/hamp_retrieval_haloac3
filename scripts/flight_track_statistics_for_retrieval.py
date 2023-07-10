@@ -35,12 +35,229 @@ import xarray as xr
 import radar_attitude
 import radar_masks
 import unified_grid as unigrid
-    
+import Quicklook_Dicts
+import measurement_instruments_ql    
 try:
     import Flight_Campaign as Campaign
 except:
         print("Module Flight Campaign is not listed in the path",
               "Flights need to be defined manually.")
+
+#%% POLAR Aircraft surface mask
+def make_POLARLandMask(resolution,polar_dict={},cfg_dict={},
+                       polar_aircraft="P5",
+                       #outfile,
+                       add_sea_ice_mask=True):
+    """
+    
+
+    Parameters
+    ----------
+    flight_dates : TYPE
+        DESCRIPTION.
+    outfile : TYPE
+        DESCRIPTION.
+    cfg_dict : dict
+        Dictionary containing the configuration arguments
+    add_sea_ice_mask : boolean, Default: False
+        Specifier if sea_ice_mask should be created and added or not. Might not
+        be useful for lower latitude flight campaigns.
+    use_radiometer : boolean, Default : False
+        In general this routine is supposed to be applied for the radar data
+        however as also the radiometer can require a surface mask this 
+        additional command should set to True and other "radar_ds" ist used.
+    Returns
+    -------
+    None.
+
+    """
+    flight_dates=[*polar_dict.keys()]
+    # Set file paths
+    ls_path = cfg_dict["campaign_path"]+'../Auxiliary/lsmask-world8-var.dist5.5.nc'
+    if not os.path.exists(ls_path):
+        raise FileNotFoundError('Land mask file not found. ',
+                    'Please download the file',
+                    'lsmask-world8-var.dist5.5.nc',
+                    'from https://www.ghrsst.org/ghrsst-data-services/tools/')
+    else:
+        pass
+    resolution=resolution
+    
+    print(polar_aircraft," sea ice land mask creation")
+    polar_sea_ice_dict={}
+    if add_sea_ice_mask:
+        #% Loop flights
+        for flight in flight_dates:
+            print("Land Sea ice mask for ",flight)
+            #import measurement_instruments_ql
+            # this creates a new surface mask that includes the sea ice cover
+            if polar_aircraft.lower()=="p5": 
+                polar_ds=polar_dict[flight]
+            else:
+                polar_ds=polar_dict[flight]
+            #%% Land mask first #%%%%%%%%%%%%%%
+            import Performance
+            performance=Performance.performance()
+            print("Add surface mask")
+            # Get sea_ice mask    
+            sea_ice_cls=measurement_instruments_ql.SEA_ICE(cfg_dict)
+            sea_ice_cls.open_sea_ice_ds()
+            sea_ice_ds=sea_ice_cls.ds 
+            try:
+                time_values=polar_ds.TIME[:]
+            except:
+                time_values=polar_ds.time[:]
+            polar_df=pd.DataFrame(data=np.nan,columns=["LAT","LON"],
+                             index=pd.DatetimeIndex(np.array(time_values)))
+            polar_df["LAT"]=polar_ds.lat.values
+            polar_df["LON"]=polar_ds.lon.values
+            
+            polar_df=polar_df.resample(resolution,convention="start").mean()
+            sea_ice_mask=pd.Series(data=np.nan,
+                                   index=pd.DatetimeIndex(polar_df.index))
+    
+            lat_2d=np.array(sea_ice_ds.lat)
+            lon_2d=np.array(sea_ice_ds.lon)
+            lat_1d=lat_2d.flatten()
+            lon_1d=lon_2d.flatten()
+            print("check for sea ice concentration")
+            for t in range(polar_df.shape[0]):
+                if not (np.isnan(polar_df["LAT"].iloc[t])) \
+                    and not (np.isnan(polar_df["LON"].iloc[t])):
+                    #  Calculate differences of aircraft position to 
+                    #  land sea mask grid
+                    distances=measurement_instruments_ql.HALO_Devices.\
+                                vectorized_harvesine_distance(
+                                                polar_df["LAT"].iloc[t],
+                                                polar_df["LON"].iloc[t],
+                                                lat_1d,lon_1d)
+            
+                    min_geoloc=np.unravel_index(np.argmin(distances,axis=None),
+                                        lat_2d.shape)
+                    sea_ice_mask.iloc[t]=sea_ice_ds["seaice"][min_geoloc[0],
+                                                              min_geoloc[1]]
+                    if polar_df["LAT"].iloc[t]>87:
+                        # from upon a specific latitude, the sea ice mask is
+                        # not yet provided anymore, but we can certainly 
+                        # assume full sea-ice cover.
+                        
+                        sea_ice_mask.iloc[t]=100
+                    else:
+                        pass
+                performance.updt(polar_df.shape[0],t)                                                             
+            sea_ice_mask=sea_ice_mask/100
+            sea_ice_mask=sea_ice_mask.fillna(0)
+            print("check for land surface")
+            # Now add land mask
+            from ac3airborne.tools import is_land as il
+            t=0
+            for x, y in zip(polar_df["LON"], polar_df["LAT"]):
+                if il.is_land(x,y):
+                    sea_ice_mask.iloc[t]=-0.1*int(il.is_land(x,y))                
+                t+=1
+                performance.updt(polar_df.shape[0],t)
+            polar_df["sea_ice"]=sea_ice_mask.values
+            polar_sea_ice_dict[flight]=polar_df
+    return polar_sea_ice_dict
+
+def plot_surface_hist_airborne_plattforms(bahamas_df,polar_resolution,
+                                          p5_df=pd.DataFrame(),
+                                          p6_df=pd.DataFrame(),
+                                          add_polar_aircraft=False,
+                                          list_flight_hours=False):
+    halo_bin_width=0.35
+    polar_width=0.2
+    halo_label="HALO"
+    p5_label="P5"
+    p6_label="P6"
+    if list_flight_hours:
+        halo_hours=str(np.round(bahamas_df.shape[0]/3600,1))
+        halo_label+=" "+halo_hours+" h"
+        if add_polar_aircraft:
+            p5_hours=str(np.round(p5_df.shape[0]*int(polar_resolution[:-1])\
+                                  /3600,1))
+            p6_hours=str(np.round(p6_df.shape[0]*int(polar_resolution[:-1])\
+                                  /3600,1))
+            p5_label+=" "+p5_hours+ "h"
+            p6_label+=" "+p6_hours+"h"
+    import matplotlib.patches as mpatches
+    
+    halo_patch = mpatches.Patch(facecolor='lightgrey',edgecolor="k",
+                                hatch="",label=halo_label,linewidth=2)
+    p5_patch   = mpatches.Patch(facecolor='lightgrey',hatch="/",
+                                edgecolor="k",label=p5_label,linewidth=2)
+    p6_patch   = mpatches.Patch(facecolor='lightgrey',hatch="\\",
+                                edgecolor="k",label=p6_label,linewidth=2)
+
+    surface_hist=plt.figure(figsize=(12,9))
+    ax1=surface_hist.add_subplot(111)
+    surface_data=bahamas_df["sfc"][bahamas_df["sfc"]>=-1]
+    surface_bins=pd.cut(surface_data,bins=[-1.05,-0.05,0.15,0.8,1.0],
+                        include_lowest=False).value_counts()
+    surface_bins=surface_bins.sort_index()
+    ax1.bar([1],surface_bins[0]/surface_data.shape[0],
+            width=halo_bin_width,facecolor="brown",edgecolor="k",lw=3)
+    ax1.bar([2],surface_bins[1]/surface_data.shape[0],
+            width=halo_bin_width,facecolor="royalblue",edgecolor="k",lw=3)
+    ax1.bar([3],surface_bins[2]/surface_data.shape[0],
+            width=halo_bin_width,facecolor="lightblue",edgecolor="k",lw=3)
+    ax1.bar([4],surface_bins[3]/surface_data.shape[0],
+            width=halo_bin_width,facecolor="white",edgecolor="k",lw=3,
+            label=halo_label)
+    
+    ax1.set_xticks([1,2,3,4])
+    
+    ax1.set_xticklabels(["Land","Open \nocean",
+                         "Marginal \nice zone",
+                         "Sea ice"])
+    ax1.set_ylim([0.0,0.6])
+    ax1.set_yticks([0,.2,.4,.6]) 
+    
+    if add_polar_aircraft:
+        p5_surface_data=p5_df["sea_ice"][p5_df["sea_ice"]>=-1]
+        p6_surface_data=p6_df["sea_ice"][p6_df["sea_ice"]>=-1]
+        p5_surface_bins=pd.cut(p5_surface_data,bins=[-1.05,-0.05,0.15,0.8,1.0],
+                        include_lowest=False).value_counts()
+        p5_surface_bins=p5_surface_bins.sort_index()
+        p6_surface_bins=pd.cut(p5_surface_data,bins=[-1.05,-0.05,0.15,0.8,1.0],
+                        include_lowest=False).value_counts()
+        p6_surface_bins=p5_surface_bins.sort_index()
+        
+        ax1.bar([0.7],p5_surface_bins[0]/p5_surface_data.shape[0],
+            width=polar_width,facecolor="brown",edgecolor="k",lw=3,hatch="/")
+        ax1.bar([1.7],p5_surface_bins[1]/p5_surface_data.shape[0],
+                width=polar_width,facecolor="royalblue",edgecolor="k",
+                hatch="/",lw=3)
+        ax1.bar([2.7],p5_surface_bins[2]/p5_surface_data.shape[0],
+            width=polar_width,facecolor="lightblue",edgecolor="k",
+            lw=3,hatch="/")
+        ax1.bar([3.7],p5_surface_bins[3]/p5_surface_data.shape[0],
+            width=polar_width,facecolor="white",edgecolor="k",lw=3,hatch="/",
+            label=p5_label)
+        
+        ax1.bar([1.3],p6_surface_bins[0]/p6_surface_data.shape[0],
+            width=polar_width,facecolor="brown",edgecolor="k",lw=3,hatch="\\")
+        ax1.bar([2.3],p6_surface_bins[1]/p6_surface_data.shape[0],
+                width=polar_width,facecolor="royalblue",edgecolor="k",
+                hatch="\\",lw=3)
+        ax1.bar([3.3],p6_surface_bins[2]/p6_surface_data.shape[0],
+            width=polar_width,facecolor="lightblue",edgecolor="k",lw=3,hatch="\\")
+        ax1.bar([4.3],p6_surface_bins[3]/p6_surface_data.shape[0],
+            width=polar_width,facecolor="white",edgecolor="k",lw=3,hatch="\\",
+            label=p6_label)
+    
+    
+    ax1.set_yticklabels(["0","20","40","60"])
+    ax1.legend(handles=[halo_patch,p5_patch,p6_patch],loc="upper right")
+    ax1.set_ylabel("Relative Flight Duration / % ")
+    sns.despine(offset=10)
+    for axis in ["left","bottom"]:
+        ax1.spines[axis].set_linewidth(3)
+        ax1.tick_params(length=10,width=3)
+    fig_name="Fig02_Sea_Surface_Distribution.pdf"
+    surface_hist.savefig(plot_path+fig_name,dpi=200,bbox_inches="tight")
+    print("Figure saved as:",plot_path+fig_name)
+
 Flight_Dates={}
 Flight_Dates["EUREC4A"]={"RF01":"20200119","RF02":"20200122",
                                  "RF03":"20200124","RF04":"20200126",
@@ -72,21 +289,58 @@ Flight_Dates["HALO_AC3"]={"RF00":"20220225",
                               "RF18":"20220412"}
 
 
-version_to_use="v0.6"
-mask_version="v0.6"    
+version_to_use="v1.6"
+mask_version="v1.6"    
 campaign="HALO_AC3"
 
 plot_height_statistics=False
-plot_surface_hist=False
-plot_tb_hist=True
-plot_joy_hist=True
+plot_surface_hist=True
+plot_tb_hist=False
+plot_joy_hist=False
 
 
 nc_path=airborne_data_importer_path+"/Flight_Data/"+campaign+"/all_nc/"
 rf_no=0
 joy_radiometer_df=pd.DataFrame()
-for rf in [*Flight_Dates[campaign].values()][1:]:
-    print(rf)
+desired_path_str="\\Work\\GIT_Repository\\hamp_processing_py\\hamp_processing_python\\"#\\Flight_Data\\HALO_AC3\\sea_ice\\"
+airborne_importer_path=actual_working_path+"/../../../"+desired_path_str
+campaign_path=airborne_importer_path+"/Flight_Data/"+campaign+"/"
+
+prcs_cfg_dict=Quicklook_Dicts.get_prcs_cfg_dict("RF01", "20220311", campaign,
+                                                    campaign_path,
+                                                    additional_entries_dict={})
+#if flight_day!=None:
+#    prcs_cfg_dict["FD"]=flight_day
+# Data Handling 
+datasets_dict, data_reader_dict=Quicklook_Dicts.get_data_handling_attr_dicts(
+        entries_to_change={})
+
+# Get Plotting Handling
+plot_handler_dict, plot_cls_args_dict,plot_fct_args_dict=\
+                                    Quicklook_Dicts.get_plotting_handling_attrs_dict(
+                                        entries_to_change={})
+POLAR_Devices_cls=measurement_instruments_ql.POLAR_Devices(prcs_cfg_dict)
+POLAR_GPS_INS_cls=measurement_instruments_ql.GPS_INS(POLAR_Devices_cls)
+POLAR_GPS_INS_cls.major_data_path=campaign_path
+
+#%% Open Polar5,6 positions
+POLAR_GPS_INS_cls.open_aircraft_gps_position(used_polar_aircraft="P5")
+# mask resolution
+resolution="15s"
+p5=POLAR_GPS_INS_cls.P5_GPS
+p5_sea_ice=make_POLARLandMask(resolution,polar_dict=p5,
+                              cfg_dict=prcs_cfg_dict,polar_aircraft="P5",
+                              add_sea_ice_mask=True)
+p5_df=pd.concat([*p5_sea_ice.values()])
+
+POLAR_GPS_INS_cls.open_aircraft_gps_position(used_polar_aircraft="P6")
+p6=POLAR_GPS_INS_cls.P6_GPS
+p6_sea_ice=make_POLARLandMask(resolution,polar_dict=p6,
+                              cfg_dict=prcs_cfg_dict,polar_aircraft="P6",
+                              add_sea_ice_mask=True)
+p6_df=pd.concat([*p6_sea_ice.values()])
+for f,rf in enumerate([*Flight_Dates[campaign].values()][1:]):
+    print(f,rf)
     bahamas_file_list=glob.glob(nc_path+"bahamas*"+rf+\
                                 "*"+version_to_use+".nc")#)
     radiometer_file_list=glob.glob(nc_path+"radiometer*"+rf+\
@@ -204,36 +458,10 @@ if plot_height_statistics:
 ###############################################################################
 # Sea ice hist
 if plot_surface_hist:
-    surface_hist=plt.figure(figsize=(12,9))
-    ax1=surface_hist.add_subplot(111)
-    surface_data=bahamas_df["sfc"][bahamas_df["sfc"]>=-1]
-    surface_bins=pd.cut(surface_data,bins=[-1,-0.05,0.05,0.5,1.0],
-                        include_lowest=True).value_counts()
-    surface_bins=surface_bins.sort_index()
-    ax1.bar([1],surface_bins[0]/surface_data.shape[0],
-            width=0.75,facecolor="brown",edgecolor="k",lw=3)
-    ax1.bar([2],surface_bins[1]/surface_data.shape[0],
-            width=0.75,facecolor="darkblue",edgecolor="k",lw=3)
-    ax1.bar([3],surface_bins[2]/surface_data.shape[0],
-            width=0.75,facecolor="lightblue",edgecolor="k",lw=3)
-    ax1.bar([4],surface_bins[3]/surface_data.shape[0],
-            width=0.75,facecolor="white",edgecolor="k",lw=3)
-    ax1.set_xticks([1,2,3,4])
-    
-    ax1.set_xticklabels(["Ground","Open \n ocean",
-                         "sea-ice \n cover < 0.5",
-                         "sea-ice \n cover > 0.5"])
-    ax1.set_ylim([0.0,0.6])
-    ax1.set_yticks([0,.2,.4,.6]) 
-    ax1.set_yticklabels(["0%","20%","40%","60%"])
-
-    sns.despine(offset=10)
-    for axis in ["left","bottom"]:
-        ax1.spines[axis].set_linewidth(3)
-        ax1.tick_params(length=10,width=3)
-    fig_name="Fig02_Sea_Surface_Distribution.pdf"
-    surface_hist.savefig(plot_path+fig_name,dpi=200,bbox_inches="tight")
-    print("Figure saved as:",plot_path+fig_name)
+    plot_surface_hist_airborne_plattforms(bahamas_df,resolution,p5_df=p5_df,
+                                          p6_df=p6_df,
+                                          add_polar_aircraft=True,
+                                          list_flight_hours=True)
     #ax1.hist(,bins=np.linspace(0,1,4))
 ###############################################################################
 radiometer_df=radiometer_df.sort_index(axis=1)
