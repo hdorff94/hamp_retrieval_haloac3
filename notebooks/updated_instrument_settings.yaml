@@ -1,0 +1,64 @@
+mirac-a:
+    nang: 3
+    angles: [3,5]
+    nfreq: 1
+    frequencies: [38,38]
+    npol: 2
+    nout: 33
+    obs_heights: [37,69]
+mirac-p:
+    nang: 3
+    angles: [0,2]
+    nfreq: 14
+    frequencies: [25,38]
+    npol: 2
+    nout: 33
+    obs_heights: [37,69] 
+hatpro:
+    nang: 3
+    angles: [0,2]
+    nfreq: 14
+    frequencies: [0,13]
+    npol: 2
+    nout: 33
+    obs_heights: [37,69]
+hamp:
+    nang: 3
+    angles: [0,2]
+    nfreq: 40
+    frequencies: [0,39]
+    npol: 2
+    nout: 44
+    obs_heights: [1,44]
+g-band:
+    nang: 16
+    angles: [3,5]
+    nfreq: 3
+    frequencies: [40,42]
+    npol: 2
+    nout: 33
+    obs_heights: [37,69]
+satellite:
+    nang: 16
+    angles: [0,15]
+    nfreq: 43
+    frequencies: [0,42]
+    npol: 2
+    nout: 1
+    obs_heights: [0,0]
+mirac-p_ground:
+    nang: 1
+    angles: [31,31]
+    nfreq: 14
+    frequencies: [25,38]
+    npol: 2
+    nout: 1
+    obs_heights: [70,70] 
+hatpro_ground:
+    nang: 1
+    angles: [31,31]
+    nfreq: 14
+    frequencies: [0,13]
+    npol: 2
+    nout: 1
+    obs_heights: [70,70]
