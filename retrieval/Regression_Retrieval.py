@@ -116,6 +116,8 @@ class Regression_Retrieval():
             file_name=self.save_path+self.x_name+"_Retrieval_coeffs"
             if not self.added_noise:
                 file_name=file_name+"_no_noise"
+            if hasattr(self,"obs_height"):
+                file_name+="_"+str(int(self.obs_height))
             reg_coeffs.to_csv(file_name+file_end)
             print("Retrieval coeffs saved as:",file_name+file_end)
         else:
@@ -129,7 +131,7 @@ class Regression_Retrieval():
             if not self.added_noise:
                 file_name=file_name+"_no_noise"
             if hasattr(self,"obs_height"):
-                file_name+="_"+str(self.obs_height)
+                file_name+="_"+str(int(self.obs_height))
             file_name+=file_end
             self.height_m_est.to_csv(self.save_path+file_name)
             print("Retrieval coeffs saved as:", self.save_path+file_name)
