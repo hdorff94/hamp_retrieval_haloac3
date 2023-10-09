@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+import os
 class Regression_Retrieval():
     def __init__(self,state_vector,state_vector_name,brightness_Ts,order,training_dates,save_path,added_noise=True,obs_height=12000):
         self.x=state_vector
@@ -113,6 +114,10 @@ class Regression_Retrieval():
                     reg_coeffs.iloc[2,f]=self.m_est[2*(f+1)]
             self.reg_coeffs=reg_coeffs
             reg_coeffs.name=str(self.training_dates)
+            # Path for individual variables will be created
+            self.save_path+="/"+self.x_name+"/"
+            if not os.path.exists(self.save_path):
+                os.makedirs(self.save_path)
             file_name=self.save_path+self.x_name+"_Retrieval_coeffs"
             if not self.added_noise:
                 file_name=file_name+"_no_noise"
@@ -133,6 +138,11 @@ class Regression_Retrieval():
             if hasattr(self,"obs_height"):
                 file_name+="_"+str(int(self.obs_height))
             file_name+=file_end
+            
+            # Path for individual variables will be created
+            self.save_path+="/"+self.x_name+"/"
+            if not os.path.exists(self.save_path):
+                os.makedirs(self.save_path)
             self.height_m_est.to_csv(self.save_path+file_name)
             print("Retrieval coeffs saved as:", self.save_path+file_name)
     
