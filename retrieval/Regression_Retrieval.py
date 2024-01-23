@@ -4,20 +4,21 @@ import xarray as xr
 
 import os
 class Regression_Retrieval():
-    def __init__(self,state_vector,state_vector_name,brightness_Ts,order,training_dates,save_path,added_noise=True,obs_height=12000):
+    def __init__(self,state_vector,state_vector_name,brightness_Ts,order,training_dates,save_path,added_noise=True,obs_height=12000,hour="12"):
         self.x=state_vector
         self.x_name=state_vector_name
         self.TBs=brightness_Ts
         
-        self.y=brightness_Ts.values[:,:-1]
-        self.freqs=brightness_Ts.iloc[:,:-1].columns
-        self.order=order
-        self.training_dates=training_dates
-        self.save_path=save_path
-        self.obs_height=obs_height
-        self.added_noise=added_noise
-    
-    def updt(self,total, progress):
+        self.y               = brightness_Ts.values[:,:-1]
+        self.freqs           = brightness_Ts.iloc[:,:-1].columns
+        self.order           = order
+        self.hour            = hour
+        self.training_dates  = training_dates
+        self.save_path       = save_path
+        self.obs_height      = obs_height
+        self.added_noise     = added_noise
+    @staticmethod
+    def updt(total, progress):
         """
         Displays or updates a console progress bar.
         
@@ -123,6 +124,7 @@ class Regression_Retrieval():
                 file_name=file_name+"_no_noise"
             if hasattr(self,"obs_height"):
                 file_name+="_"+str(int(self.obs_height))
+            file_name+="_"+self.hour+"UTC"
             reg_coeffs.to_csv(file_name+file_end)
             print("Retrieval coeffs saved as:",file_name+file_end)
         else:
@@ -137,6 +139,7 @@ class Regression_Retrieval():
                 file_name=file_name+"_no_noise"
             if hasattr(self,"obs_height"):
                 file_name+="_"+str(int(self.obs_height))
+            file_name+="_"+self.hour+"UTC"
             file_name+=file_end
             
             # Path for individual variables will be created
