@@ -4,7 +4,9 @@ import xarray as xr
 
 import os
 class Regression_Retrieval():
-    def __init__(self,state_vector,state_vector_name,brightness_Ts,order,training_dates,save_path,added_noise=True,obs_height=12000,hour="12"):
+    def __init__(self,state_vector,state_vector_name,brightness_Ts,order,
+                 training_dates,save_path,added_noise=True,
+                 obs_height=12000,hour="12"):
         self.x=state_vector
         self.x_name=state_vector_name
         self.TBs=brightness_Ts
