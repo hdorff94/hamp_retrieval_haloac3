@@ -1,6 +1,5 @@
 # NetCDF files like airborne datasets
 *.nc
-*.csv
 
 # Images
 *.jpg
