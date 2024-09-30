@@ -7,7 +7,6 @@ PAMTRA_Handler is a class in order to handle and conduct the actual forward simu
 
 ###
 """
-
 notes pamtra reupdate/install on levante":
 module load python3/2023.01-gcc-11.2.0
 spack load gcc@11.2.0%gcc@11.2.0
