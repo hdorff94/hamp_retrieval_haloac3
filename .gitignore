@@ -1,6 +1,5 @@
 # NetCDF files like airborne datasets
 *.nc
-*.csv
 
 # Images
 *.jpg
@@ -9,7 +8,6 @@
 *.gif
 # Docs and Images
 *.pdf
-*.csv
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

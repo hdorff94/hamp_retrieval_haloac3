@@ -4,7 +4,9 @@ import xarray as xr
 
 import os
 class Regression_Retrieval():
-    def __init__(self,state_vector,state_vector_name,brightness_Ts,order,training_dates,save_path,added_noise=True,obs_height=12000,hour="12"):
+    def __init__(self,state_vector,state_vector_name,brightness_Ts,order,
+                 training_dates,save_path,added_noise=True,
+                 obs_height=12000,hour="12"):
         self.x=state_vector
         self.x_name=state_vector_name
         self.TBs=brightness_Ts
@@ -184,4 +186,24 @@ class Regression_Retrieval():
             self.updt(self.x_all_heights["z"].shape[0],height)
         if save_coeffs:
             self.m_est_as_csv(column_integrated=False)
-        
+    @staticmethod
+    def get_relevant_retrieval_height(retrieval_coeff_heights,halo_height=5000):
+        idx_height=np.argmin(abs(np.array(retrieval_coeff_heights)-halo_height))
+        relevant_height=retrieval_coeff_heights[idx_height]
+        return idx_height,relevant_height
+
+    def open_height_relevant_retrieval(retrieval_coeff_heights,
+        var_to_retrieve,act_halo_height,
+            coeff_path="C:\\Users\\u300737\\Desktop\\Desktop_alter_Rechner\\"+\
+            "PhD_UHH_WIMI\\Work\\GIT_Repository\\hamp_processing_py\\"+\
+                "hamp_processing_python\\Flight_Data\\HALO_AC3\\retrieval\\"):
+    
+        height=act_halo_height.copy()
+        idx_height,relevant_height=\
+            Regression_Retrieval.get_relevant_retrieval_height(
+                                    retrieval_coeff_heights,halo_height=height)
+        m_est_height=pd.read_csv(coeff_path+var_to_retrieve+\
+                                 "_Retrieval_coeffs_several_dates_"+\
+                                 str(relevant_height)+".csv",
+                                 index_col="Unnamed: 0")
+        return m_est_height

@@ -1,6 +1,13 @@
-# HAMP Retrieval for T, Q and LWP applicable to HALO-(AC)³
-This is the python version of hamp processing to create qc-data on a unified grid
+# HAMP Retrieval for IWV and first T, Q profiles applicable to HALO-(AC)³
+This is the package that performs the regression-retrieval analysis to retrieve IWV from HAMP during HALO-(AC)3. 
+The read-me file is currently under process and needs to be updated.
+
+The generation of the training dataset using ERA5 fields and therefrom calculating brightness temperatures using the forward simulator PAMTRA are excecuted with:
 ```python
-    import numpy # this is a code block
+    run_ERA5PAMTRA.ipynb
 ```
-here it ends
+To perform the IWV retrieval use:
+```python
+    Column_HAMP_PAMTRA_retrieval.ipynb
+```
+
